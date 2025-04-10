@@ -28,22 +28,30 @@ socket.on('all-users', async (users) => {
 });
 
 socket.on('offer', async ({ from, offer }) => {
-  createPeerConnection(from);
-  const pc = peerConnections[from];
-
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-  await pc.setRemoteDescription(new RTCSessionDescription(offer));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-
-  socket.emit('answer', { to: from, answer });
-});
-
-socket.on('answer', async ({ from, answer }) => {
-  const pc = peerConnections[from];
-  await pc.setRemoteDescription(new RTCSessionDescription(answer));
-});
+    createPeerConnection(from);
+    const pc = peerConnections[from];
+  
+    if (pc.signalingState !== "stable") {
+      console.warn('Skipping setRemoteDescription(offer) because signaling state is', pc.signalingState);
+      return;
+    }
+  
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+  
+    socket.emit('answer', { to: from, answer });
+  });
+  
+  socket.on('answer', async ({ from, answer }) => {
+    const pc = peerConnections[from];
+  
+    if (!pc.currentRemoteDescription && pc.signalingState === "have-local-offer") {
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    } else {
+      console.warn('Skipping setRemoteDescription(answer) — wrong state:', pc.signalingState);
+    }
+  });
 
 socket.on('ice-candidate', ({ from, candidate }) => {
   const pc = peerConnections[from];
