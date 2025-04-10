@@ -1,39 +1,32 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
-app.use(express.static('public'));
+const usersInRoom = {};
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
   socket.on('join', (roomId) => {
     socket.join(roomId);
-    socket.to(roomId).emit('user-joined', socket.id);
+
+    if (!usersInRoom[roomId]) usersInRoom[roomId] = [];
+    usersInRoom[roomId].push(socket.id);
+
+    // Send list of other users in room to new user
+    const otherUsers = usersInRoom[roomId].filter(id => id !== socket.id);
+    socket.emit('all-users', otherUsers);
   });
 
-  socket.on('offer', (data) => {
-    socket.to(data.roomId).emit('offer', data.offer);
+  socket.on('offer', ({ to, offer }) => {
+    io.to(to).emit('offer', { from: socket.id, offer });
   });
 
-  socket.on('answer', (data) => {
-    socket.to(data.roomId).emit('answer', data.answer);
+  socket.on('answer', ({ to, answer }) => {
+    io.to(to).emit('answer', { from: socket.id, answer });
   });
 
-  socket.on('ice-candidate', (data) => {
-    socket.to(data.roomId).emit('ice-candidate', data.candidate);
+  socket.on('ice-candidate', ({ to, candidate }) => {
+    io.to(to).emit('ice-candidate', { from: socket.id, candidate });
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    for (const room in usersInRoom) {
+      usersInRoom[room] = usersInRoom[room].filter(id => id !== socket.id);
+    }
   });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
 });
