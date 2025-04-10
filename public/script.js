@@ -8,6 +8,22 @@ const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 let localStream;
 const remoteAudioContainer = document.getElementById('remoteAudioContainer');
 
+document.getElementById('muteBtn').addEventListener('click', () => {
+    if (!localStream) return;
+    isMuted = !isMuted;
+    localStream.getAudioTracks()[0].enabled = !isMuted;
+    document.getElementById('muteBtn').textContent = isMuted ? 'Unmute' : 'Mute';
+  });
+  
+  document.getElementById('endCallBtn').addEventListener('click', () => {
+    for (let id in peerConnections) {
+      peerConnections[id]?.close();
+    }
+    socket.disconnect();
+    window.location.href = 'join.html';
+  });
+  
+
 async function joinRoom() {
   localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   socket.emit('join', roomId);
