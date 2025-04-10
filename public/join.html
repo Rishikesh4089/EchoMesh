@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Join Voice Chat</title>
+</head>
+<body>
+  <h2>Join a Voice Chat Room</h2>
+  <input id="roomId" placeholder="Enter Room ID" />
+  <button onclick="goToCall()">Join</button>
+
+  <script>
+    function goToCall() {
+      const roomId = document.getElementById('roomId').value;
+      if (roomId) {
+        window.location.href = `/call.html?room=${roomId}`;
+      }
+    }
+  </script>
+</body>
+</html>
